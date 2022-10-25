@@ -189,7 +189,9 @@ class LuaBlockParser(private val context : LuaBlockContext) {
                     // L1_1[L1_2]
                     is Exp.NameExp -> {
                         if("_ENV" == lhs.name.name){
-                            context[exp.name.name] = calculateExp(expression, level)
+                            val name = context[exp.name.name]!!.toCode().removerOuter('"')
+
+                            context[name] = calculateExp(expression, level)
                         }else{
                             val (table, isGlobal) = context.getTable(lhs.name.name)
                             val name = context[exp.name.name]!!.toCode()
@@ -197,7 +199,7 @@ class LuaBlockParser(private val context : LuaBlockContext) {
                                 // write out when it accesses global
                                 genCode.addLine("${lhs.name.name}[$name] = ${calculateExp(expression, level).toCode()}", level)
                             }else{
-                                table[name] = calculateExp(expression, level)
+                                table[name.removerOuter('"')] = calculateExp(expression, level)
                             }
                         }
                     }
@@ -274,7 +276,7 @@ class LuaBlockParser(private val context : LuaBlockContext) {
                             lhsName = nextVar
                         }
                         // a["b"] is equal with a.b in Lua
-                        LuaRef("${cleanString(lhsName)}[${valueName}]")
+                        LuaRef("${cleanString(lhsName)}.${valueName.removerOuter('"')}")
                     }
                     lhs is Exp.NameExp && exp is Exp.Constant -> {
                         // L5_2 = L2_2[1]
@@ -316,5 +318,7 @@ class LuaBlockParser(private val context : LuaBlockContext) {
         genCode.forEach { x -> outputJoiner.add(x) }
         return outputJoiner.toString()
     }
+
+    private fun String.removerOuter(char: Char) = this.trimStart(char).trimEnd(char)
 }
 
