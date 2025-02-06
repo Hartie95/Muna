@@ -218,7 +218,7 @@ class LuaBlockParser(private val context : LuaBlockContext) {
             // = 1
             is Exp.Constant -> return LuaRef(constantToCode(e.value))
             // = L1_1
-            is Exp.NameExp -> return context.getObj(e.name.name).clone()
+            is Exp.NameExp -> return context.getObj(e.name.name)
             // = -A
             is Exp.UnopExp -> return LuaRef(expToCode(e))
             // = A+B
