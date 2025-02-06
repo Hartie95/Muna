@@ -5,6 +5,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.logging.Logger
+import java.util.stream.Stream
 import kotlin.io.path.isDirectory
 import kotlin.io.path.name
 
@@ -13,6 +14,8 @@ var success = AtomicInteger(0)
 var failed = AtomicInteger(0)
 
 fun String.execute() : Process = Runtime.getRuntime().exec(this)
+
+val runParallel = true
 
 fun main(){
 
@@ -39,9 +42,19 @@ fun luaFormat(file : Path){
     process.inputReader().lines().forEach { println(it) }
 }
 
+fun Stream<Path>.conditionalParallel(runParallel: Boolean) : Stream<Path> {
+    return if(runParallel){
+        this.parallel()
+    }else{
+        this
+    }
+}
+
 fun handleFolder(path : Path, output: Path){
-    Files.list(path).parallel().forEach { f ->
-            if(f.isDirectory()){
+    Files.list(path)
+        .conditionalParallel(runParallel)
+        .forEach { f ->
+            if (f.isDirectory()) {
                 val childOutput = Path.of(output.toString(), path.relativize(f).toString())
                 Files.createDirectories(childOutput)
                 handleFolder(f, childOutput)
@@ -50,7 +63,7 @@ fun handleFolder(path : Path, output: Path){
             try {
                 handleFile(f, output)
                 success.incrementAndGet()
-            }catch (e : Throwable){
+            } catch (e: Throwable) {
                 logger.warning("Parse Error " + f.fileName)
                 e.printStackTrace()
                 failed.incrementAndGet()
@@ -74,16 +87,18 @@ fun handleFile(file: Path, folder : Path){
 }
 
 fun handleFolder2(path : Path, handler: (Path) -> Unit){
-    Files.list(path).parallel().forEach { f ->
-        if(f.isDirectory()){
-            handleFolder2(f, handler)
-            return@forEach
+    Files.list(path)
+        .conditionalParallel(runParallel)
+        .forEach { f ->
+            if (f.isDirectory()) {
+                handleFolder2(f, handler)
+                return@forEach
+            }
+            if (!f.name.contains(".lua")) {
+                return@forEach
+            }
+            handler(f)
         }
-        if(!f.name.contains(".lua")){
-            return@forEach
-        }
-        handler(f)
-    }
 }
 
 
