@@ -26,6 +26,11 @@ class LuaBlockParser(private val context : LuaBlockContext) {
             }
         }
 
+        // add simple global vars
+        context.getGlobalBindings()
+            .filter { item -> item.value is LuaRef && context[item.value.toCode()] !is LuaBlockCodeObj}
+            .forEach{ item -> genCode.addLine("${item.key} = ${item.value.toCode()}", level)}
+        
         // create global definition
         context.getGlobalBindings()
             .filter { item -> item.value is LuaTableObj}
